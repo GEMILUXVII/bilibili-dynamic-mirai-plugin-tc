@@ -1,4 +1,5 @@
 _添加拉取置顶动态下的置顶评论功能_
+
 <img src="docs/img/top-comment.png" width="400" alt="样式1">
 
 # BilibiliDynamic MiraiPlugin
