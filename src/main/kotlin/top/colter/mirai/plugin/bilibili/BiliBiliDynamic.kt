@@ -20,83 +20,85 @@ import top.colter.mirai.plugin.bilibili.old.migration
 import top.colter.mirai.plugin.bilibili.old.updateData
 import top.colter.mirai.plugin.bilibili.tasker.*
 
-object BiliBiliDynamic : KotlinPlugin(
-    JvmPluginDescription(
-        id = "top.colter.bilibili-dynamic-mirai-plugin",
-        name = "BiliBili Dynamic",
-        version = "3.2.16-BETA1",
-    ) {
-        author("Colter")
-        dependsOn("xyz.cssxsh.mirai.plugin.mirai-skia-plugin", ">= 1.1.0")
+object BiliBiliDynamic :
+        KotlinPlugin(
+                JvmPluginDescription(
+                        id = "top.colter.bilibili-dynamic-mirai-plugin",
+                        name = "BiliBili Dynamic",
+                        version = "3.2.16-BETA1",
+                ) {
+                  author("Colter")
+                  dependsOn("xyz.cssxsh.mirai.plugin.mirai-skia-plugin", ">= 1.1.0")
+                }
+        ) {
+
+  var uid: Long = 0L
+  var tagid: Int = 0
+
+  var cookie = BiliCookie()
+
+  val dynamicChannel = Channel<DynamicDetail>(20)
+  val liveChannel = Channel<LiveDetail>(20)
+  val messageChannel = Channel<BiliMessage>(20)
+  val missChannel = Channel<BiliMessage>(10)
+
+  val liveUsers = mutableMapOf<Long, Long>()
+
+  val liveGwp = PermissionId(BiliBiliDynamic.description.id, "live.atall")
+  val videoGwp = PermissionId(BiliBiliDynamic.description.id, "video.atall")
+  val crossContact = PermissionId(BiliBiliDynamic.description.id, "crossContact")
+
+  override fun PluginComponentStorage.onLoad() {
+    /**
+     * run after auto login
+     * @author cssxsh
+     */
+    runAfterStartup {
+      updateData()
+
+      DynamicCheckTasker.start()
+      TopCommentCheckTasker.start()
+      LiveCheckTasker.start()
+      DynamicMessageTasker.start()
+      LiveMessageTasker.start()
+      SendTasker.start()
+      ListenerTasker.start()
+      if (BiliConfig.enableConfig.liveCloseNotifyEnable) LiveCloseCheckTasker.start()
+      if (BiliConfig.enableConfig.cacheClearEnable) CacheClearTasker.start()
     }
-) {
+  }
 
-    var uid: Long = 0L
-    var tagid: Int = 0
-
-    var cookie = BiliCookie()
-
-    val dynamicChannel = Channel<DynamicDetail>(20)
-    val liveChannel = Channel<LiveDetail>(20)
-    val messageChannel = Channel<BiliMessage>(20)
-    val missChannel = Channel<BiliMessage>(10)
-
-    val liveUsers = mutableMapOf<Long, Long>()
-
-    val liveGwp = PermissionId(BiliBiliDynamic.description.id, "live.atall")
-    val videoGwp = PermissionId(BiliBiliDynamic.description.id, "video.atall")
-    val crossContact = PermissionId(BiliBiliDynamic.description.id, "crossContact")
-
-    override fun PluginComponentStorage.onLoad() {
-        /**
-         * run after auto login
-         * @author cssxsh
-         */
-        runAfterStartup {
-            updateData()
-
-            DynamicCheckTasker.start()
-            LiveCheckTasker.start()
-            DynamicMessageTasker.start()
-            LiveMessageTasker.start()
-            SendTasker.start()
-            ListenerTasker.start()
-            if (BiliConfig.enableConfig.liveCloseNotifyEnable) LiveCloseCheckTasker.start()
-            if (BiliConfig.enableConfig.cacheClearEnable) CacheClearTasker.start()
-        }
+  override fun onEnable() {
+    // XXX: mirai console version check
+    check(SemVersion.parseRangeRequirement(">= 2.12.0-RC").test(MiraiConsole.version)) {
+      "$name $version 需要 Mirai-Console 版本 >= 2.12.0，目前版本是 ${MiraiConsole.version}"
     }
+    logger.info { "BiliBili Dynamic Plugin loaded" }
 
-    override fun onEnable() {
-        // XXX: mirai console version check
-        check(SemVersion.parseRangeRequirement(">= 2.12.0-RC").test(MiraiConsole.version)) {
-            "$name $version 需要 Mirai-Console 版本 >= 2.12.0，目前版本是 ${MiraiConsole.version}"
-        }
-        logger.info { "BiliBili Dynamic Plugin loaded" }
+    PermissionService.INSTANCE.register(liveGwp, "直播At全体")
+    PermissionService.INSTANCE.register(videoGwp, "视频At全体")
+    PermissionService.INSTANCE.register(crossContact, "跨聊天语境控制")
 
-        PermissionService.INSTANCE.register(liveGwp, "直播At全体")
-        PermissionService.INSTANCE.register(videoGwp, "视频At全体")
-        PermissionService.INSTANCE.register(crossContact, "跨聊天语境控制")
+    DynamicCommand.register()
 
-        DynamicCommand.register()
+    BiliData.reload()
+    BiliConfig.reload()
+    BiliImageTheme.reload()
+    BiliImageQuality.reload()
 
-        BiliData.reload()
-        BiliConfig.reload()
-        BiliImageTheme.reload()
-        BiliImageQuality.reload()
+    migration()
 
-        migration()
+    launch { initData() }
+  }
 
-        launch { initData() }
-    }
+  override fun onDisable() {
+    DynamicCommand.unregister()
+    dynamicChannel.close()
+    messageChannel.close()
 
-    override fun onDisable() {
-        DynamicCommand.unregister()
-        dynamicChannel.close()
-        messageChannel.close()
+    BiliTasker.cancelAll()
 
-        BiliTasker.cancelAll()
-
-        BiliData.save()
-        BiliConfig.save()
-    }
+    BiliData.save()
+    BiliConfig.save()
+  }
 }

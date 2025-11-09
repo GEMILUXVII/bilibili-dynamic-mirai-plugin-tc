@@ -9,6 +9,9 @@ const val NEW_DYNAMIC = "https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/
 const val SPACE_DYNAMIC = "https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space"
 const val DYNAMIC_DETAIL = "https://api.bilibili.com/x/polymer/web-dynamic/v1/detail"
 
+// Comment
+const val COMMENT_REPLY = "https://api.bilibili.com/x/v2/reply"
+
 // Video
 const val VIDEO_DETAIL = "https://api.bilibili.com/x/web-interface/view"
 
@@ -51,4 +54,3 @@ const val SHORT_LINK = "https://api.bilibili.com/x/share/click"
 
 // Twemoji CDN
 const val TWEMOJI = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72"
-
